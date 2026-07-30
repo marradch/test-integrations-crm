@@ -13,6 +13,13 @@ class Controller extends BaseController
 
     public function sendContactForm(ContactFormRequest $request)
     {
+        $data = $request->validated();
+
+        $name = $data['accountName'] ?? '';
+        $phone = $data['accountPhone'] ?? '';
+
+        // Dispatch job to send to SalesDrive (minimal payload)
+        \App\Jobs\SendSalesDriveJob::dispatch($name, $phone);
 
         return response()->json(['status' => 'success']);
     }
