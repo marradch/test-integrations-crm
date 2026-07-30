@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use App\Events\SalesDriveLeadCreated;
+use Illuminate\Support\Facades\Log;
 
 class SalesDriveService
 {
@@ -33,8 +35,26 @@ class SalesDriveService
             'phone' => $data['phone'] ?? '',
         ], $data['extra'] ?? []);
 
-        return Http::withHeaders($headers)
+        $response = Http::withHeaders($headers)
             ->timeout(15)
             ->post($this->url, $payload);
+
+        if ($response->successful()) {
+            $responseData = $response->json();
+            Log::info('Sales Drive response:', $responseData);
+
+            if (($responseData['success'] ?? false)) {
+                event(new SalesDriveLeadCreated($payload));
+            } else {
+                Log::warning('SalesDrive return error state:', $responseData ?? []);
+            }
+        } else {
+            Log::error('Error in call SalesDrive API:', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+        }
+
+        return $response;
     }
 }
