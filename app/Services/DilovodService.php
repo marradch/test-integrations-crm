@@ -18,10 +18,12 @@ class DilovodService {
     public function createClient(array $data) {
         try {
             $detailsData = [
-                [
-                    'tp'  => 'phone',
-                    'val' => $leadData['phone'] ?? '',
-                ]
+                'phones' => [
+                    [
+                        'pr'   => $data['phone'] ?? '', // Номер телефону
+                        'kind' => 'phone',              // Тип контакту
+                    ],
+                ],
             ];
             $response = Http::post($this->url, [
                 'version' => '0.25',
@@ -35,7 +37,7 @@ class DilovodService {
                             'uk' => $data['fName'] ?? '',
                         ],
                         'personType' => $data['personType'] ?? 1004000000000035,
-                        //"details" => json_encode($detailsData, JSON_UNESCAPED_UNICODE)
+                        "details" => json_encode($detailsData, JSON_UNESCAPED_UNICODE)
                     ],
                 ],
             ]);
