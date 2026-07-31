@@ -26,6 +26,7 @@ Then install frontend packages and build assets:
 ```bash
 docker compose exec laravel_app npm install
 docker compose exec laravel_app npm run build
+```
 
 ### Queue and Postgres
 
@@ -42,13 +43,8 @@ docker compose exec laravel_app php artisan migrate
 # run a queue worker
 docker compose exec -d laravel_app php artisan queue:work
 ```
+### Environment variables are in `.env.example`
+- SalesDrive API: `SALESDRIVE_URL`, `SALESDRIVE_API_KEY`.
+- Dilovod API: `DILOVOD_URL`, `DILOVOD_API_KEY`.
+- Telegram API:  `TELEGRAM_BOT_TOKEN`, `TELEGRAM_MANAGER_CHAT_ID`.
 
-Environment variables for SalesDrive API are in `.env.example` as `SALESDRIVE_URL` and `SALESDRIVE_API_KEY`.
-```
-
-## Notes
-
-- The form is implemented using Vue 3 Composition API.
-- Client-side validation uses `yup`.
-- The backend route is configured as an API endpoint.
-- The frontend sends `submittedAt` and hidden spam-check fields with each submission.
