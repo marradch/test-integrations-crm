@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use App\Events\SalesDriveLeadCreated;
+use App\Events\IntegrationErrorOccurred;
 use Illuminate\Support\Facades\Log;
 
 class SalesDriveService
@@ -46,9 +47,11 @@ class SalesDriveService
             if (($responseData['success'] ?? false)) {
                 event(new SalesDriveLeadCreated($payload));
             } else {
+                event(new IntegrationErrorOccurred(self::class, 'SalesDrive return error state', $payload));
                 Log::warning('SalesDrive return error state:', $responseData ?? []);
             }
         } else {
+            event(new IntegrationErrorOccurred(self::class, 'SalesDrive return error state', $payload));
             Log::error('Error in call SalesDrive API:', [
                 'status' => $response->status(),
                 'body'   => $response->body(),

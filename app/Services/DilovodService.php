@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Events\IntegrationErrorOccurred;
 
 class DilovodService {
     protected string $apiKey;
@@ -48,10 +49,17 @@ class DilovodService {
                 Log::error('Fail to create client in dilovod', [
                     'body' => $response->body()
                 ]);
+                event(new IntegrationErrorOccurred(self::class, 'Fail to create client in dilovod', $data));
+            } else {
+                $responseData = $response->json();
+                if ($responseData['error'] ?? '') {
+                    event(new IntegrationErrorOccurred(self::class, $responseData['error'], $data));
+                }
             }
 
         } catch (\Throwable $e) {
             Log::error('Error in call dilovod api: ' . $e->getMessage());
+            event(new IntegrationErrorOccurred(self::class, 'Error in call dilovod api:' . $e->getMessage(), $data));
         }
     }
 }

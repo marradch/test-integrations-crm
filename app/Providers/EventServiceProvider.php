@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Event;
 use App\Events\SalesDriveLeadCreated;
 use App\Listeners\CreateDilovodClientListener;
 
+use App\Events\IntegrationErrorOccurred;
+use App\Listeners\SendTelegramErrorNotificationListener;
+
 class EventServiceProvider extends ServiceProvider
 {
     /**
@@ -23,6 +26,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         SalesDriveLeadCreated::class => [
             CreateDilovodClientListener::class,
+        ],
+        IntegrationErrorOccurred::class => [
+            SendTelegramErrorNotificationListener::class,
         ],
     ];
 
