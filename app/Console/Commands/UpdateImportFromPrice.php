@@ -26,7 +26,7 @@ class UpdateImportFromPrice extends Command
      */
     public function handle()
     {
-        $service = new UpdateImportFromPriceService();
+        $service = app()->make(UpdateImportFromPriceService::class);
         //try {
             $outputFilePath = $service->update();
             $this->info("Файл оновлено та збережено: {$outputFilePath}");
