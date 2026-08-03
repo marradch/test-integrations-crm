@@ -69,5 +69,10 @@ Files located in path
 
 New prices are highligted lightblue and put date of script execution in last column
 
+### XML Generation Command
+```bash
+php artisan app:market-place-xml-command
+```
+
 
 
