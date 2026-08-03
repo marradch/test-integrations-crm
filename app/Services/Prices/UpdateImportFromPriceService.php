@@ -4,8 +4,11 @@ namespace App\Services\Prices;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Exception;
-use App\Services\Prices\PriceSheetsParsers\{EnerpiaSheetParser, DeviSheetParser};
+use App\Services\Prices\PriceSheetsParsers\{
+    EnerpiaSheetParser, DeviSheetParser, ArnoldRakStandartSheetParser
+};
 
 class UpdateImportFromPriceService
 {
@@ -16,7 +19,8 @@ class UpdateImportFromPriceService
 
     public function __construct(
         private EnerpiaSheetParser $enerpiaSheetParser,
-        private DeviSheetParser $deviSheetParser
+        private DeviSheetParser $deviSheetParser,
+        private ArnoldRakStandartSheetParser $arnoldRakStandartSheetParser
     ) {
         $this->priceListPath = resource_path('excel/Price.xlsx');
         $this->importFilePath = resource_path('excel/Import.xlsx');
@@ -37,27 +41,49 @@ class UpdateImportFromPriceService
             throw new Exception("Файл импорта не найден: {$this->importFilePath}");
         }
 
-        echo "Зчитуємо прайс-лист і будуємо карту артикулів та цін...\n";
-
-        echo "Зчитуємо Enerpia Cable прайс-лист...\n";
-        $this->priceMap = array_merge($this->priceMap, $this->enerpiaSheetParser->parse());
-        echo "Зчитуємо Devi прайс-лист...\n";
-        $this->priceMap = array_merge($this->priceMap, $this->deviSheetParser->parse());
+        $this->runParsers();
 
         if (empty($this->priceMap)) {
             throw new Exception("Карта цін пуста. Перевірте файл прайс-листа на наявність даних.");
         }
 
-        echo "Побудова індексу імпорту...\n";
-        $importSpreadsheet = IOFactory::load($this->importFilePath);
-        echo "Файл імпорту зчитано успішно.\n";
-        $sheet = $importSpreadsheet->getActiveSheet();
-        $importRowMap = $this->buildImportIndex($sheet);
         $this->updateImportFile();        
+    }
+
+    private function runParsers(): void
+    {
+        echo "Зчитуємо прайс-лист і будуємо карту артикулів та цін...\n";
+
+        echo "Завантаження Excel файлу прайс-листа...\n";
+        $spreadsheet = IOFactory::load($this->priceListPath);
+
+        // Список усіх парсерів
+        $parsers = [
+            'Enerpia Cable'      => $this->enerpiaSheetParser,
+            'Devi'               => $this->deviSheetParser,
+            'ArnoldRak Standart' => $this->arnoldRakStandartSheetParser,
+        ];
+
+        foreach ($parsers as $sheetName => $parser) {
+            echo "Зчитуємо {$sheetName} прайс-лист...\n";
+            
+            // Передаємо завантажений $spreadsheet у кожен парсер
+            $parsedPrices = $parser->parse($spreadsheet);
+            
+            // Оптимізований аналог array_merge без створення зайвих проміжних масивів
+            foreach ($parsedPrices as $sku => $price) {
+                $this->priceMap[$sku] = $price;
+            }
+        }
+        
+        // Звільняємо пам'ять від важкого об'єкта Excel
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
     }
 
     private function updateImportFile(): void
     {
+        echo "Оновлюємо файл імпорту на основі карти цін...\n";
         $importSpreadsheet = IOFactory::load($this->importFilePath);
         $sheet = $importSpreadsheet->getActiveSheet();
         $importRowMap = $this->buildImportIndex($sheet);
@@ -96,8 +122,10 @@ class UpdateImportFromPriceService
      * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
      * @return array<string, int>
      */
-    private function buildImportIndex($sheet): array
+    private function buildImportIndex(Worksheet $sheet): array
     {
+        echo "Побудова індексу імпорту...\n";
+
         $index = [];
 
         // викоростовуємо getRowIterator() для ітерації по рядках, що є більш ефективним для великих файлів

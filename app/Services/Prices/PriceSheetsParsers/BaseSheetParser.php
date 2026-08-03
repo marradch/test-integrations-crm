@@ -4,6 +4,7 @@ namespace App\Services\Prices\PriceSheetsParsers;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Exception;
 
 abstract class BaseSheetParser
@@ -19,30 +20,28 @@ abstract class BaseSheetParser
         $this->priceListPath = $priceListPath ?? resource_path('excel/Price.xlsx');
     }
 
-    /**
-     * Основний метод для парсингу прайс-листа. Викликає метод обробки конкретного листа.
-     *
-     * @return array<string, float> [Артикул => Цена]
-     * @throws Exception
-     */
-    public function parse(): array
+    public function parse(Spreadsheet $spreadsheet = null): array
     {
         if (empty(static::SHEET_NAME)) {
-            throw new Exception("Ім'я листа (SHEET_NAME) не визначено в класі " . static::class);
+            throw new Exception("Назву аркуша (SHEET_NAME) не визначено у класі " . static::class);
         }
 
-        if (!file_exists($this->priceListPath)) {
-            throw new Exception("Файл прайс-листа не знайдено: {$this->priceListPath}");
+        // Якщо об'єкт Excel не передано, завантажуємо його з диска
+        if ($spreadsheet === null) {
+            if (!file_exists($this->priceListPath)) {
+                throw new Exception("Файл прайс-листа не знайдено: {$this->priceListPath}");
+            }
+            $spreadsheet = IOFactory::load($this->priceListPath);
         }
 
-        $spreadsheet = IOFactory::load($this->priceListPath);
         $sheet = $spreadsheet->getSheetByName(static::SHEET_NAME);
 
         if ($sheet === null) {
-            throw new Exception("Лист с названием '" . static::SHEET_NAME . "' не знайдено в файлі.");
+            // Можна замість помилки просто повертати порожній масив або логувати попередження
+            return [];
         }
 
-        // Викликаємо метод обробки конкретного листа, який реалізується в дочірніх класах
+        $this->priceMap = [];
         $this->processSheet($sheet);
 
         return $this->priceMap;
@@ -78,21 +77,22 @@ abstract class BaseSheetParser
 
     /**
      * Очистка числового параметра від небажаних символів та приведення його до стандартного формату.
+     * "2,50 м²" -> "2.5", "2,00 м²" -> "2", "0,50" -> "0.5"
      */
     protected function cleanNumericParam(string $val): ?string
     {
+        // 1. Замінюємо кому на крапку
         $cleaned = str_replace(',', '.', trim($val));
+
+        // 2. Видаляємо все, крім цифр і крапки (пробели, м², символи)
         $cleaned = preg_replace('/[^\d.]/', '', $cleaned);
 
+        // 3. Перевіряємо, чи залишилося число
         if ($cleaned === '' || !is_numeric($cleaned)) {
             return null;
         }
 
-        // Якщо число закінчується на .0, видаляємо цей нуль (наприклад, 1.0 -> 1)
-        if (str_ends_with($cleaned, '.0')) {
-            $cleaned = substr($cleaned, 0, -2);
-        }
-
-        return $cleaned;
+        // 4. Приведення до float видаляє усі незначащі нулі наприкінці (2.50 -> 2.5, 2.00 -> 2)
+        return (string)(float)$cleaned;
     }
 }
