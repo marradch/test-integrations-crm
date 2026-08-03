@@ -5,7 +5,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Exception;
-use App\Services\Prices\PriceSheetsParsers\EnerpiaSheetParser;
+use App\Services\Prices\PriceSheetsParsers\{EnerpiaSheetParser, DeviSheetParser};
 
 class UpdateImportFromPriceService
 {
@@ -15,7 +15,8 @@ class UpdateImportFromPriceService
     protected array $priceMap = [];
 
     public function __construct(
-        private EnerpiaSheetParser $enerpiaSheetParser
+        private EnerpiaSheetParser $enerpiaSheetParser,
+        private DeviSheetParser $deviSheetParser
     ) {
         $this->priceListPath = resource_path('excel/Price.xlsx');
         $this->importFilePath = resource_path('excel/Import.xlsx');
@@ -40,6 +41,8 @@ class UpdateImportFromPriceService
 
         echo "Зчитуємо Enerpia Cable прайс-лист...\n";
         $this->priceMap = array_merge($this->priceMap, $this->enerpiaSheetParser->parse());
+        echo "Зчитуємо Devi прайс-лист...\n";
+        $this->priceMap = array_merge($this->priceMap, $this->deviSheetParser->parse());
 
         if (empty($this->priceMap)) {
             throw new Exception("Карта цін пуста. Перевірте файл прайс-листа на наявність даних.");
@@ -85,9 +88,7 @@ class UpdateImportFromPriceService
         $writer->save($savePath);
 
         echo "Файл імпорту успішно оновлено та збережено: {$savePath}\n";
-    }
-
-    
+    }    
 
     /**
      * оптиміззована побудова індексу імпорту для швидкого доступу до рядків за артикулом.

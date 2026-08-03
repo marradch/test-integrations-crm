@@ -2,26 +2,15 @@
 
 namespace App\Services\Prices\PriceSheetsParsers;
 
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
-class EnerpiaSheetParser
+class EnerpiaSheetParser extends BaseSheetParser
 {
-    const SHEET_NAME = 'Enerpia Cable';
-    private array $priceMap = [];
-    
-    public function __construct() {
-        $this->priceListPath = resource_path('excel/Price.xlsx');
-    }
+    protected const SHEET_NAME = 'Enerpia Cable';
 
-    public function parse(): array
+    protected function processSheet(Worksheet $sheet): void
     {
-        $spreadsheet = IOFactory::load($this->priceListPath);
-        $sheet = $spreadsheet->getSheetByName(self::SHEET_NAME);
-
-        if ($sheet === null) {
-            throw new \Exception("Лист з назвою '" . self::SHEET_NAME . "' не знайдено у файлі прайс-листа.");
-        }
-        
         $highestRow = $sheet->getHighestRow();
 
         for ($row = 1; $row <= $highestRow; $row++) {
@@ -49,8 +38,6 @@ class EnerpiaSheetParser
                 }
             }
         }
-
-        return $this->priceMap;
     }
 
     /** Нормалізує артикул для Enerpia */
@@ -82,24 +69,5 @@ class EnerpiaSheetParser
         }
 
         return $sku;
-    }
-
-    /**
-     * Форматування ціни з рядка у float. Повертає null, якщо ціна не валідна.
-     */
-    private function parsePrice($priceRaw): ?float
-    {
-        if ($priceRaw === null || $priceRaw === '') {
-            return null;
-        }
-
-        if (is_numeric($priceRaw)) {
-            return (float)$priceRaw;
-        }
-
-        $cleaned = str_replace(',', '.', (string)$priceRaw);
-        $cleaned = preg_replace('/[^\d.]/', '', $cleaned);
-
-        return is_numeric($cleaned) ? (float)$cleaned : null;
     }
 }
