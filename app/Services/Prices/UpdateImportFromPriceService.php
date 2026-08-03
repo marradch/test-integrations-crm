@@ -7,7 +7,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Exception;
 use App\Services\Prices\PriceSheetsParsers\{
-    EnerpiaSheetParser, DeviSheetParser, ArnoldRakStandartSheetParser
+    EnerpiaSheetParser, DeviSheetParser, ArnoldRakStandartSheetParser, ArnoldRakPremiumSheetParser
 };
 
 class UpdateImportFromPriceService
@@ -20,7 +20,8 @@ class UpdateImportFromPriceService
     public function __construct(
         private EnerpiaSheetParser $enerpiaSheetParser,
         private DeviSheetParser $deviSheetParser,
-        private ArnoldRakStandartSheetParser $arnoldRakStandartSheetParser
+        private ArnoldRakStandartSheetParser $arnoldRakStandartSheetParser,
+        private ArnoldRakPremiumSheetParser $arnoldRakPremiumSheetParser
     ) {
         $this->priceListPath = resource_path('excel/Price.xlsx');
         $this->importFilePath = resource_path('excel/Import.xlsx');
@@ -62,6 +63,7 @@ class UpdateImportFromPriceService
             'Enerpia Cable'      => $this->enerpiaSheetParser,
             'Devi'               => $this->deviSheetParser,
             'ArnoldRak Standart' => $this->arnoldRakStandartSheetParser,
+            'ArnoldRak Premium'  => $this->arnoldRakPremiumSheetParser,
         ];
 
         foreach ($parsers as $sheetName => $parser) {
