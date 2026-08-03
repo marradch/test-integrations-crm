@@ -48,3 +48,26 @@ docker compose exec -d laravel_app php artisan queue:work
 - Dilovod API: `DILOVOD_URL`, `DILOVOD_API_KEY`.
 - Telegram API:  `TELEGRAM_BOT_TOKEN`, `TELEGRAM_MANAGER_CHAT_ID`.
 
+## Prices
+
+for prices updes use
+
+```bash
+php artisan app:update-import-from-price
+```
+Files located in path
+`/resources/excel`
+- Price
+- Import
+- Otput
+
+### Implemented parsers for sheets
+- Enepria Cable
+- Devi (Table 1)
+- Arnorld Rak Snandart (Tab-2)
+- Arnold Rak Premium (Tab-1)
+
+New prices are highligted lightblue and put date of script execution in last column
+
+
+
