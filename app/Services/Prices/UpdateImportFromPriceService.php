@@ -9,6 +9,7 @@ use Exception;
 use App\Services\Prices\PriceSheetsParsers\{
     EnerpiaSheetParser, DeviSheetParser, ArnoldRakStandartSheetParser, ArnoldRakPremiumSheetParser
 };
+use OpenSpout\Reader\XLSX\Reader as XLSXReader;
 
 class UpdateImportFromPriceService
 {
@@ -58,16 +59,15 @@ class UpdateImportFromPriceService
         echo "Завантаження Excel файлу прайс-листа...\n";
         $spreadsheet = IOFactory::load($this->priceListPath);
 
-        // Список усіх парсерів
         $parsers = [
-            'Enerpia Cable'      => $this->enerpiaSheetParser,
-            'Devi'               => $this->deviSheetParser,
-            'ArnoldRak Standart' => $this->arnoldRakStandartSheetParser,
-            'ArnoldRak Premium'  => $this->arnoldRakPremiumSheetParser,
+            $this->enerpiaSheetParser,
+            $this->deviSheetParser,
+            $this->arnoldRakStandartSheetParser,
+            $this->arnoldRakPremiumSheetParser,
         ];
 
-        foreach ($parsers as $sheetName => $parser) {
-            echo "Зчитуємо {$sheetName} прайс-лист...\n";
+        foreach ($parsers as $parser) {
+            echo "Зчитуємо " . get_class($parser) . " прайс-лист...\n";
             
             // Передаємо завантажений $spreadsheet у кожен парсер
             $parsedPrices = $parser->parse($spreadsheet);
@@ -85,13 +85,14 @@ class UpdateImportFromPriceService
 
     private function updateImportFile(): void
     {
-        echo "Оновлюємо файл імпорту на основі карти цін...\n";
-        $importSpreadsheet = IOFactory::load($this->importFilePath);
-        $sheet = $importSpreadsheet->getActiveSheet();
-        $importRowMap = $this->buildImportIndex($sheet);
+        $importRowMap = $this->buildImportIndex();
 
         $currentDate = date('Y-m-d H:i:s');
         $lightBlueColor = 'FFE0F2FE';
+
+        echo "Оновлюємо файл імпорту на основі карти цін...\n";
+        $importSpreadsheet = IOFactory::load($this->importFilePath);
+        $sheet = $importSpreadsheet->getActiveSheet();
 
         foreach ($this->priceMap as $searchKey => $basePrice) {
             if (isset($importRowMap[$searchKey])) {
@@ -121,33 +122,40 @@ class UpdateImportFromPriceService
     /**
      * оптиміззована побудова індексу імпорту для швидкого доступу до рядків за артикулом.
      * 
-     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet
      * @return array<string, int>
      */
-    private function buildImportIndex(Worksheet $sheet): array
+    private function buildImportIndex(): array
     {
-        echo "Побудова індексу імпорту...\n";
+        echo "Побудова індексу імпорту через OpenSpout...\n";
 
         $index = [];
 
-        // викоростовуємо getRowIterator() для ітерації по рядках, що є більш ефективним для великих файлів
-        foreach ($sheet->getRowIterator() as $row) {
-            $rowIndex = $row->getRowIndex();
-            
-            $cellIterator = $row->getCellIterator('B', 'B'); // Читаем ТОЛЬКО колонку B
-            $cellIterator->setIterateOnlyExistingCells(true); // Пропускаем пустые виртуальные ячейки
+        $reader = new XLSXReader();
+        $reader->open($this->importFilePath);
 
-            foreach ($cellIterator as $cell) {
-                $skuRaw = $cell->getValue();
+        foreach ($reader->getSheetIterator() as $sheet) {
+            $rowIndex = 1;
 
-                if (!empty($skuRaw)) {
-                    // зберігаємо лише перший рядок для кожного артикулу, щоб уникнути дублювання
-                    if (!isset($index[$skuRaw])) {
+            foreach ($sheet->getRowIterator() as $row) {
+                $cells = $row->getCells();
+
+                // Колонка B має індекс 1 (0 = A, 1 = B)
+                if (isset($cells[1])) {
+                    $skuRaw = trim((string)$cells[1]->getValue());
+
+                    if (!empty($skuRaw) && !isset($index[$skuRaw])) {
                         $index[$skuRaw] = $rowIndex;
                     }
                 }
+
+                $rowIndex++;
             }
+
+            // Обробляємо лише перший активний аркуш
+            break;
         }
+
+        $reader->close();
 
         return $index;
     }
