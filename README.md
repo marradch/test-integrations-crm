@@ -50,7 +50,7 @@ docker compose exec -d laravel_app php artisan queue:work
 
 ## Prices
 
-for prices updes use
+for prices updates use
 
 ```bash
 php artisan app:update-import-from-price
